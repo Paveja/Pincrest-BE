@@ -8,19 +8,21 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  username     String    @unique
-  email        String    @unique
-  passwordHash String
-  profileImage String?
-  bio          String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
-  followers    Follow[]  @relation("FollowFollowing")
-  following    Follow[]  @relation("FollowFollower")
-  pins         Pin[]
+  id             String     @id @default(cuid())
+  name           String
+  username       String     @unique
+  email          String     @unique
+  passwordHash   String
+  profileImage   String?
+  bio            String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  sessions       Session[]
+  followers      Follow[]   @relation("FollowFollowing")
+  following      Follow[]   @relation("FollowFollower")
+  pins           Pin[]
+  boards         Board[]    @relation("BoardOwner")
+  savedPinBoards PinBoard[] @relation("PinBoardSavedByUser")
 }
 
 model Session {
@@ -46,9 +48,37 @@ model Follow {
 }
 
 model Pin {
-  id      String @id @default(cuid())
-  ownerId String
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id        String     @id @default(cuid())
+  ownerId   String
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  boardPins PinBoard[]
 
   @@index([ownerId])
+}
+
+model Board {
+  id        String     @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User       @relation("BoardOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  pins      PinBoard[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([ownerId])
+}
+
+model PinBoard {
+  id            String   @id @default(cuid())
+  pinId         String
+  boardId       String
+  savedByUserId String
+  createdAt     DateTime @default(now())
+  pin           Pin      @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  board         Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  savedByUser   User     @relation("PinBoardSavedByUser", fields: [savedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([pinId, boardId])
+  @@index([boardId, createdAt, id])
+  @@index([savedByUserId])
 }
