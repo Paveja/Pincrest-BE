@@ -1,14 +1,12 @@
 import type { CookieOptions, Response } from "express";
-import { env } from "../config/env.js";
-
 export const SESSION_COOKIE_NAME = "pincrest_session";
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const sessionCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: env.NODE_ENV === "production",
+  secure: process.env.NODE_ENV === "production",
   sameSite: "lax",
-  path: "/api/v1/auth",
+  path: "/api/v1",
 };
 
 export function setSessionCookie(res: Response, token: string): void {
