@@ -1,22 +1,15 @@
 import type { RequestHandler } from "express";
 import { ApiError } from "../lib/api-error.js";
-import { getSessionToken } from "../lib/auth.js";
-export type AuthenticatedUser = {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  profileImage: string | null;
-  bio: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { clearSessionCookie, readSessionCookie } from "../lib/auth-cookie.js";
+import type { PublicUser } from "../services/auth.service.js";
+
+export type AuthenticatedUser = PublicUser;
 
 async function resolveAuthenticatedUser(
   token: string,
 ): Promise<AuthenticatedUser | null> {
-  const { getAuthenticatedUser } = await import("../services/auth.service.js");
-  return getAuthenticatedUser(token);
+  const { getSession } = await import("../services/auth.service.js");
+  return (await getSession(token))?.user ?? null;
 }
 
 export function createAuthMiddleware(
@@ -25,17 +18,18 @@ export function createAuthMiddleware(
   ) => Promise<AuthenticatedUser | null> = resolveAuthenticatedUser,
 ): RequestHandler {
   return async (request, response, next) => {
-    const token = getSessionToken(request.get("cookie"));
+    const sessionToken = readSessionCookie(request.get("cookie"));
 
-    if (!token) {
+    if (!sessionToken) {
       return next(
         new ApiError(401, "UNAUTHENTICATED", "Authentication is required."),
       );
     }
 
-    const user = await resolveUser(token);
+    const user = await resolveUser(sessionToken);
 
     if (!user) {
+      clearSessionCookie(response);
       return next(
         new ApiError(401, "UNAUTHENTICATED", "Authentication is required."),
       );
@@ -47,27 +41,3 @@ export function createAuthMiddleware(
 }
 
 export const requireAuth = createAuthMiddleware();
-import { clearSessionCookie, readSessionCookie } from "../lib/auth-cookie.js";
-import { getSession } from "../services/auth.service.js";
-
-export const requireAuth: RequestHandler = async (req, res, next) => {
-  const sessionToken = readSessionCookie(req.headers.cookie);
-
-  if (!sessionToken) {
-    return next(
-      new ApiError(401, "UNAUTHENTICATED", "Authentication is required."),
-    );
-  }
-
-  const session = await getSession(sessionToken);
-
-  if (!session) {
-    clearSessionCookie(res);
-    return next(
-      new ApiError(401, "UNAUTHENTICATED", "Authentication is required."),
-    );
-  }
-
-  res.locals.authenticatedUser = session.user;
-  next();
-};

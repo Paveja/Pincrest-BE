@@ -8,7 +8,7 @@ import {
 } from "../controllers/auth.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
-import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
+import { loginSchema, registerSchema } from "../services/auth.schemas.js";
 
 function createAuthRateLimit() {
   return rateLimit({

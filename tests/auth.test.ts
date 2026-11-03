@@ -73,7 +73,10 @@ test("authentication middleware rejects a missing or invalid session", async () 
   const middleware = createAuthMiddleware(async () => null);
   let receivedError: unknown;
   const request = { get: () => undefined } as unknown as Request;
-  const response = { locals: {} } as Response;
+  const response = {
+    locals: {},
+    clearCookie: () => undefined,
+  } as unknown as Response;
 
   await middleware(request, response, (error) => {
     receivedError = error;
