@@ -28,6 +28,11 @@ export function validateRequest<T>(
     }
 
     res.locals.validatedRequest = result.data;
+
+    if (part === "params") {
+      res.locals.validatedParams = result.data;
+    }
+
     next();
   };
 }
