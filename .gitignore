@@ -6,6 +6,7 @@ coverage/
 !.env.example
 prisma/generated/
 src/generated/prisma/
+/uploads/
 *.log
 
 # Crash artifacts — a single core dump can exceed GitHub's 100MB file limit
