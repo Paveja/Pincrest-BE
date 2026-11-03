@@ -12,15 +12,18 @@ async function resolveAuthenticatedUser(
   return (await getSession(token))?.user ?? null;
 }
 
-export function createAuthMiddleware(
-  resolveUser: (
-    token: string,
-  ) => Promise<AuthenticatedUser | null> = resolveAuthenticatedUser,
+function buildAuthMiddleware(
+  resolveUser: (token: string) => Promise<AuthenticatedUser | null>,
+  optional: boolean,
 ): RequestHandler {
   return async (request, response, next) => {
     const sessionToken = readSessionCookie(request.get("cookie"));
 
     if (!sessionToken) {
+      if (optional) {
+        return next();
+      }
+
       return next(
         new ApiError(401, "UNAUTHENTICATED", "Authentication is required."),
       );
@@ -30,6 +33,10 @@ export function createAuthMiddleware(
 
     if (!user) {
       clearSessionCookie(response);
+      if (optional) {
+        return next();
+      }
+
       return next(
         new ApiError(401, "UNAUTHENTICATED", "Authentication is required."),
       );
@@ -40,4 +47,21 @@ export function createAuthMiddleware(
   };
 }
 
+export function createAuthMiddleware(
+  resolveUser: (
+    token: string,
+  ) => Promise<AuthenticatedUser | null> = resolveAuthenticatedUser,
+): RequestHandler {
+  return buildAuthMiddleware(resolveUser, false);
+}
+
+export function createOptionalAuthMiddleware(
+  resolveUser: (
+    token: string,
+  ) => Promise<AuthenticatedUser | null> = resolveAuthenticatedUser,
+): RequestHandler {
+  return buildAuthMiddleware(resolveUser, true);
+}
+
 export const requireAuth = createAuthMiddleware();
+export const optionalAuth = createOptionalAuthMiddleware();

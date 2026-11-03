@@ -21,6 +21,7 @@ model User {
   followers    Follow[]  @relation("FollowFollowing")
   following    Follow[]  @relation("FollowFollower")
   pins         Pin[]
+  boards       Board[]
 }
 
 model Session {
@@ -51,4 +52,19 @@ model Pin {
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
+}
+
+model Board {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  coverImage  String?
+  isPrivate   Boolean  @default(false)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@index([ownerId, isPrivate, createdAt])
 }
