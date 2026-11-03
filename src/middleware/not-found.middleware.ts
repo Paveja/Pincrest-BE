@@ -1,0 +1,12 @@
+import type { RequestHandler } from "express";
+import { ApiError } from "../lib/api-error.js";
+
+export const notFoundMiddleware: RequestHandler = (req, _res, next) => {
+  next(
+    new ApiError(
+      404,
+      "NOT_FOUND",
+      `Route ${req.method} ${req.path} was not found.`,
+    ),
+  );
+};
