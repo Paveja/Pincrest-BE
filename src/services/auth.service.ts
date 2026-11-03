@@ -1,3 +1,24 @@
+import { prisma } from "../lib/prisma.js";
+import {
+  createSessionToken,
+  hashPassword,
+  hashSessionToken,
+  sessionLifetimeMs,
+  verifyPassword,
+} from "../lib/auth.js";
+import { ApiError } from "../lib/api-error.js";
+import type { LoginInput, RegisterInput } from "../schemas/auth.schema.js";
+
+const publicUserSelect = {
+  id: true,
+  name: true,
+  username: true,
+  email: true,
+  profileImage: true,
+  bio: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 import { createHash, randomBytes } from "node:crypto";
 import type { User } from "../generated/prisma/client.js";
 import { ApiError } from "../lib/api-error.js";
@@ -47,6 +68,14 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
+export async function registerUser(input: RegisterInput) {
+  const passwordHash = await hashPassword(input.password);
+  const token = createSessionToken();
+  const expiresAt = new Date(Date.now() + sessionLifetimeMs);
+
+  try {
+    const user = await prisma.$transaction(async (transaction) => {
+      const createdUser = await transaction.user.create({
 async function createSession(userId: string): Promise<AuthResult> {
   const sessionToken = createSessionToken();
   const tokenHash = hashSessionToken(sessionToken);
@@ -84,16 +113,23 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
           email: input.email,
           passwordHash,
         },
+        select: publicUserSelect,
       });
 
       await transaction.session.create({
         data: {
+          userId: createdUser.id,
+          tokenHash: hashSessionToken(token),
           tokenHash,
           userId: user.id,
           expiresAt,
         },
       });
 
+      return createdUser;
+    });
+
+    return { user, token, expiresAt };
       return user;
     });
 
@@ -106,6 +142,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
       throw new ApiError(
         409,
         "ACCOUNT_ALREADY_EXISTS",
+        "Email or username is already in use.",
         "The email or username is already in use.",
       );
     }
@@ -114,6 +151,39 @@ export async function registerUser(input: RegisterInput): Promise<AuthResult> {
   }
 }
 
+export async function loginUser(input: LoginInput) {
+  const user = await prisma.user.findUnique({
+    where: { email: input.email },
+    select: {
+      ...publicUserSelect,
+      passwordHash: true,
+    },
+  });
+
+  if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
+    return null;
+  }
+
+  const token = createSessionToken();
+  const expiresAt = new Date(Date.now() + sessionLifetimeMs);
+
+  await prisma.session.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashSessionToken(token),
+      expiresAt,
+    },
+  });
+
+  const { passwordHash: _passwordHash, ...publicUser } = user;
+  return { user: publicUser, token, expiresAt };
+}
+
+export async function getAuthenticatedUser(token: string) {
+  const tokenHash = hashSessionToken(token);
+  const session = await prisma.session.findUnique({
+    where: { tokenHash },
+    include: { user: { select: publicUserSelect } },
 export async function loginUser(input: LoginInput): Promise<AuthResult> {
   const user = await prisma.user.findUnique({
     where: { email: input.email },
@@ -155,11 +225,23 @@ export async function getSession(token: string): Promise<{
     return null;
   }
 
+  if (session.expiresAt.getTime() <= Date.now()) {
   if (session.expiresAt <= new Date()) {
     await prisma.session.deleteMany({ where: { tokenHash } });
     return null;
   }
 
+  return session.user;
+}
+
+export async function deleteSession(token: string | null): Promise<void> {
+  if (!token) {
+    return;
+  }
+
+  await prisma.session.deleteMany({
+    where: { tokenHash: hashSessionToken(token) },
+  });
   return {
     user: toPublicUser(session.user),
   };
