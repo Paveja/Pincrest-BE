@@ -12,6 +12,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/auth.test.ts",
+    "test": "tsx --test src/lib/auth-security.test.ts",
     "format": "prettier --write \"src/**/*.ts\" prisma.config.ts tsconfig.json package.json && prisma format",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
