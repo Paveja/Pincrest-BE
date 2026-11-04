@@ -8,10 +8,12 @@ import {
 import {
   getMyProfile,
   getPublicUserProfile,
+  listPublicUserPins,
   patchMyProfile,
 } from "../controllers/users.controller.js";
 import { optionalAuth, requireAuth } from "../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
+import { pinListQuerySchema } from "../schemas/pins.schema.js";
 import {
   followUserParamsSchema,
   publicProfileParamsSchema,
@@ -27,6 +29,13 @@ usersRouter.patch(
   requireAuth,
   validateRequest(updateProfileSchema),
   patchMyProfile,
+);
+usersRouter.get(
+  "/:username/pins",
+  optionalAuth,
+  validateRequest(publicProfileParamsSchema, "params"),
+  validateRequest(pinListQuerySchema, "query"),
+  listPublicUserPins,
 );
 usersRouter.post(
   "/:username/follow",
