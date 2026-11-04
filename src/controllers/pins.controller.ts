@@ -16,7 +16,9 @@ import {
 
 export const listPins: RequestHandler = async (_request, response) => {
   const query = response.locals.validatedRequest as PinListQuery;
-  const result = await getPins(query);
+  const user = response.locals.authenticatedUser as
+    AuthenticatedUser | undefined;
+  const result = await getPins(query, user?.id);
 
   response.status(200).json({ success: true, data: result });
 };
@@ -24,14 +26,16 @@ export const listPins: RequestHandler = async (_request, response) => {
 export const listMyPins: RequestHandler = async (_request, response) => {
   const user = response.locals.authenticatedUser as AuthenticatedUser;
   const query = response.locals.validatedRequest as PinListQuery;
-  const result = await getMyPins(user.id, query);
+  const result = await getMyPins(user.id, query, user.id);
 
   response.status(200).json({ success: true, data: result });
 };
 
 export const getPinById: RequestHandler = async (_request, response) => {
   const { id } = response.locals.validatedRequest as { id: string };
-  const pin = await getPin(id);
+  const user = response.locals.authenticatedUser as
+    AuthenticatedUser | undefined;
+  const pin = await getPin(id, user?.id);
 
   response.status(200).json({ success: true, data: { pin } });
 };
