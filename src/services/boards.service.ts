@@ -154,15 +154,53 @@ export async function getBoardPins(
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
     take: query.limit + 1,
-    select: pinBoardSelect,
+    select: {
+      id: true,
+      pin: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          imageUrl: true,
+          destinationUrl: true,
+          ownerId: true,
+          createdAt: true,
+          updatedAt: true,
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              profileImage: true,
+            },
+          },
+          _count: {
+            select: { likes: true },
+          },
+          likes: {
+            where: { userId },
+            select: { id: true },
+          },
+        },
+      },
+    },
   });
   const hasMore = results.length > query.limit;
-  const pins = results.slice(0, query.limit);
-  const nextCursor = hasMore ? (pins.at(-1)?.id ?? null) : null;
+  const pinBoards = results.slice(0, query.limit);
+  const nextCursor = hasMore ? (pinBoards.at(-1)?.id ?? null) : null;
 
   return {
     board,
-    pins,
+    pins: pinBoards.map(({ pin }) => {
+      const { owner, _count, likes, ...pinData } = pin;
+
+      return {
+        ...pinData,
+        creator: owner,
+        likeCount: _count.likes,
+        isLiked: likes.length > 0,
+      };
+    }),
     pagination: {
       limit: query.limit,
       hasMore,

@@ -27,6 +27,7 @@ const [{ boardsRouter }, { authorizeBoardOwner, boardWriteError }] =
     import("../src/routes/boards.routes.js"),
     import("../src/services/boards.service.js"),
   ]);
+const { prisma } = await import("../src/lib/prisma.js");
 
 const app = express();
 app.use(express.json());
@@ -205,5 +206,85 @@ describe("optional authentication for public board details", () => {
     assert.equal(receivedError, undefined);
     assert.equal(sessionCookieCleared, true);
     assert.equal(response.locals.authenticatedUser, undefined);
+  });
+});
+
+describe("board Pin response shape", () => {
+  it("returns full Pin fields instead of PinBoard join rows", async () => {
+    const originalSessionFindUnique = prisma.session.findUnique;
+    const originalBoardFindUnique = prisma.board.findUnique;
+    const originalPinBoardFindMany = prisma.pinBoard.findMany;
+    const createdAt = new Date("2026-02-01T00:00:00.000Z");
+    const sessionUser = {
+      id: "board_owner_1",
+      name: "Jordan Lee",
+      username: "jordanlee",
+      email: "jordan@example.com",
+      passwordHash: "hidden",
+      profileImage: null,
+      bio: null,
+      createdAt,
+      updatedAt: createdAt,
+    };
+    const pinRecord = {
+      id: "pin_1",
+      title: "Ceramic tableware",
+      description: "Handmade blue ceramic bowls.",
+      imageUrl: "https://images.example.com/ceramics.jpg",
+      destinationUrl: "https://shop.example.com/ceramics",
+      ownerId: "creator_1",
+      createdAt,
+      updatedAt: createdAt,
+      owner: {
+        id: "creator_1",
+        name: "Ava Green",
+        username: "ava",
+        profileImage: null,
+      },
+      _count: { likes: 3 },
+      likes: [{ id: "like_1" }],
+    };
+    const boardId = "board_1";
+
+    prisma.session.findUnique = (async () => ({
+      expiresAt: new Date(Date.now() + 60_000),
+      user: sessionUser,
+    })) as typeof prisma.session.findUnique;
+    prisma.board.findUnique = (async () => ({
+      id: boardId,
+      name: "Home inspiration",
+      description: "Ideas for the living room.",
+      coverImage: null,
+      isPrivate: false,
+      ownerId: sessionUser.id,
+      createdAt,
+      updatedAt: createdAt,
+    })) as typeof prisma.board.findUnique;
+    prisma.pinBoard.findMany = (async () => [
+      { id: "pin_board_1", pin: pinRecord },
+    ]) as typeof prisma.pinBoard.findMany;
+
+    try {
+      const response = await fetch(
+        `${origin}/api/v1/boards/${boardId}/pins?limit=10`,
+        { headers: { Cookie: "pincrest_session=board-pin-session" } },
+      );
+      const body = await response.json();
+      const [pin] = body.data.pins;
+
+      assert.equal(response.status, 200);
+      assert.equal(body.success, true);
+      assert.equal(body.data.pins.length, 1);
+      assert.equal(pin.title, "Ceramic tableware");
+      assert.equal(pin.imageUrl, "https://images.example.com/ceramics.jpg");
+      assert.equal(pin.creator.username, "ava");
+      assert.equal(pin.likeCount, 3);
+      assert.equal(pin.isLiked, true);
+      assert.equal("pinId" in pin, false);
+    } finally {
+      prisma.session.findUnique = originalSessionFindUnique;
+      prisma.board.findUnique = originalBoardFindUnique;
+      prisma.pinBoard.findMany = originalPinBoardFindMany;
+    }
   });
 });

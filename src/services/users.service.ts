@@ -1,6 +1,8 @@
 import { prisma } from "../lib/prisma.js";
 import { ApiError } from "../lib/api-error.js";
+import type { PinListQuery } from "../schemas/pins.schema.js";
 import type { UpdateProfileInput } from "../schemas/users.schema.js";
+import { getMyPins } from "./pins.service.js";
 
 const profileSelect = {
   id: true,
@@ -101,6 +103,23 @@ export async function getPublicProfile(username: string, viewerId?: string) {
 
 export function getCurrentProfile(userId: string) {
   return requireProfile({ id: userId });
+}
+
+export async function getPublicUserPins(
+  username: string,
+  query: PinListQuery,
+  viewerId?: string,
+) {
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "USER_NOT_FOUND", "User profile was not found.");
+  }
+
+  return getMyPins(user.id, query, viewerId);
 }
 
 export async function updateCurrentProfile(

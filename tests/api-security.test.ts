@@ -15,6 +15,7 @@ const [{ app }, { clearSessionCookie, setSessionCookie }] = await Promise.all([
   import("../src/app.js"),
   import("../src/lib/auth-cookie.js"),
 ]);
+const { prisma } = await import("../src/lib/prisma.js");
 
 const server: Server = createServer(app);
 await new Promise<void>((resolve, reject) => {
@@ -74,6 +75,59 @@ describe("protected API routes", () => {
           message: "Authentication is required.",
         },
       });
+    }
+  });
+});
+
+describe("public user Pin route", () => {
+  it("returns the requested user’s Pins in the standard Pin shape", async () => {
+    const originalUserFindUnique = prisma.user.findUnique;
+    const originalPinFindMany = prisma.pin.findMany;
+    const originalPinCount = prisma.pin.count;
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const pinRecord = {
+      id: "pin_ava_1",
+      title: "Ava’s coastal garden",
+      description: "A compact garden overlooking the coast.",
+      imageUrl: "https://images.example.com/ava-garden.jpg",
+      destinationUrl: null,
+      ownerId: "ava_user_id",
+      createdAt,
+      updatedAt: createdAt,
+      owner: {
+        id: "ava_user_id",
+        name: "Ava Green",
+        username: "ava",
+        profileImage: null,
+      },
+      _count: { likes: 2 },
+    };
+
+    prisma.user.findUnique = (async () => ({
+      id: "ava_user_id",
+    })) as typeof prisma.user.findUnique;
+    prisma.pin.findMany = (async () => [
+      pinRecord,
+    ]) as typeof prisma.pin.findMany;
+    prisma.pin.count = (async () => 1) as typeof prisma.pin.count;
+
+    try {
+      const response = await fetch(`${origin}/api/v1/users/ava/pins?page=1`);
+      const body = await response.json();
+      const [pin] = body.data.pins;
+
+      assert.equal(response.status, 200);
+      assert.equal(body.success, true);
+      assert.equal(body.data.pins.length, 1);
+      assert.equal(pin.title, "Ava’s coastal garden");
+      assert.equal(pin.imageUrl, "https://images.example.com/ava-garden.jpg");
+      assert.equal(pin.creator.username, "ava");
+      assert.equal(pin.likeCount, 2);
+      assert.equal(pin.isLiked, false);
+    } finally {
+      prisma.user.findUnique = originalUserFindUnique;
+      prisma.pin.findMany = originalPinFindMany;
+      prisma.pin.count = originalPinCount;
     }
   });
 });
