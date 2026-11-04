@@ -2,10 +2,12 @@ import type { CookieOptions, Response } from "express";
 export const SESSION_COOKIE_NAME = "pincrest_session";
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const sessionCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   path: "/api/v1",
 };
 

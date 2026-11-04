@@ -7,17 +7,30 @@ import { requestLoggingMiddleware } from "./middleware/request-logging.middlewar
 import { v1Router } from "./routes/v1.routes.js";
 
 export const app = express();
+const allowedFrontendOrigins = new Set(env.FRONTEND_ORIGINS);
 
 app.disable("x-powered-by");
 app.use(
   cors({
-    origin: env.FRONTEND_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      return callback(
+        null,
+        allowedFrontendOrigins.has(origin) ? origin : false,
+      );
+    },
     credentials: true,
   }),
 );
 app.use((_request, response, next) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
-  response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors 'self' https://revolte.ai https://*.revolte.ai",
+  );
   response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
   if (env.NODE_ENV === "production") {

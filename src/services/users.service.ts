@@ -79,8 +79,24 @@ async function requireProfile(where: { id: string } | { username: string }) {
   return toProfile(user);
 }
 
-export function getPublicProfile(username: string) {
-  return requireProfile({ username });
+export async function getPublicProfile(username: string, viewerId?: string) {
+  const profile = await requireProfile({ username });
+
+  if (!viewerId) {
+    return { ...profile, isFollowing: false };
+  }
+
+  const relationship = await prisma.follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: viewerId,
+        followingId: profile.id,
+      },
+    },
+    select: { id: true },
+  });
+
+  return { ...profile, isFollowing: relationship !== null };
 }
 
 export function getCurrentProfile(userId: string) {

@@ -10,7 +10,7 @@ import {
   getPublicUserProfile,
   patchMyProfile,
 } from "../controllers/users.controller.js";
-import { requireAuth } from "../middleware/auth.middleware.js";
+import { optionalAuth, requireAuth } from "../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
 import {
   followUserParamsSchema,
@@ -54,6 +54,7 @@ usersRouter.get(
 );
 usersRouter.get(
   "/:username",
+  optionalAuth,
   validateRequest(publicProfileParamsSchema, "params"),
   getPublicUserProfile,
 );

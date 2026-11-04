@@ -8,6 +8,30 @@ const environmentSchema = z
       .default("development"),
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     FRONTEND_ORIGIN: z.url().default("http://localhost:3000"),
+    FRONTEND_ORIGINS: z
+      .string()
+      .optional()
+      .transform((value) =>
+        value
+          ?.split(",")
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      )
+      .pipe(
+        z
+          .array(
+            z.url().refine((origin) => {
+              const parsedOrigin = new URL(origin);
+              return (
+                (parsedOrigin.protocol === "http:" ||
+                  parsedOrigin.protocol === "https:") &&
+                parsedOrigin.origin === origin
+              );
+            }, "Frontend entries must be exact HTTP or HTTPS origins."),
+          )
+          .min(1)
+          .optional(),
+      ),
     IMAGE_STORAGE_DRIVER: z.enum(["filesystem", "s3"]).default("filesystem"),
     IMAGE_STORAGE_DIR: z.string().min(1).default("./uploads/images"),
     IMAGE_PUBLIC_BASE_URL: z.url().optional(),
@@ -84,6 +108,9 @@ if (!parsedEnvironment.success) {
 
 export const env = {
   ...parsedEnvironment.data,
+  FRONTEND_ORIGINS: parsedEnvironment.data.FRONTEND_ORIGINS ?? [
+    parsedEnvironment.data.FRONTEND_ORIGIN,
+  ],
   IMAGE_PUBLIC_BASE_URL:
     parsedEnvironment.data.IMAGE_PUBLIC_BASE_URL ??
     `http://localhost:${parsedEnvironment.data.PORT}/uploads`,

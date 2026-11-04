@@ -7,6 +7,8 @@ import { after, describe, it } from "node:test";
 process.env.DATABASE_URL ??=
   "postgresql://pincrest-test:pincrest-test@127.0.0.1:5432/pincrest_test?sslmode=disable";
 process.env.FRONTEND_ORIGIN = "https://frontend.pincrest.test";
+process.env.FRONTEND_ORIGINS =
+  "https://frontend.pincrest.test,https://admin.pincrest.test";
 process.env.NODE_ENV = "production";
 
 const [{ app }, { clearSessionCookie, setSessionCookie }] = await Promise.all([
@@ -52,6 +54,7 @@ describe("protected API routes", () => {
       ["PATCH", "/api/v1/pins/c123456789012345678901234"],
       ["DELETE", "/api/v1/pins/c123456789012345678901234"],
       ["POST", "/api/v1/pins/c123456789012345678901234/like"],
+      ["PUT", "/api/v1/pins/c123456789012345678901234/like"],
       ["DELETE", "/api/v1/pins/c123456789012345678901234/like"],
       ["POST", "/api/v1/pins/c123456789012345678901234/comments"],
       ["PATCH", "/api/v1/comments/c123456789012345678901234"],
@@ -104,14 +107,22 @@ describe("CORS and security response headers", () => {
       },
     });
 
+    assert.equal(rejected.headers.get("access-control-allow-origin"), null);
+
+    const secondAllowedOrigin = await fetch(`${origin}/api/v1/pins`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://admin.pincrest.test",
+        "Access-Control-Request-Method": "PATCH",
+      },
+    });
+
+    assert.equal(secondAllowedOrigin.status, 204);
     assert.equal(
-      rejected.headers.get("access-control-allow-origin"),
-      "https://frontend.pincrest.test",
+      secondAllowedOrigin.headers.get("access-control-allow-origin"),
+      "https://admin.pincrest.test",
     );
-    assert.notEqual(
-      rejected.headers.get("access-control-allow-origin"),
-      "https://untrusted.pincrest.test",
-    );
+    assert.notEqual(rejected.headers.get("access-control-allow-origin"), "*");
   });
 
   it("sets baseline security headers and production HSTS", async () => {
@@ -119,7 +130,11 @@ describe("CORS and security response headers", () => {
 
     assert.equal(response.status, 404);
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
-    assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.equal(response.headers.get("x-frame-options"), null);
+    assert.equal(
+      response.headers.get("content-security-policy"),
+      "frame-ancestors 'self' https://revolte.ai https://*.revolte.ai",
+    );
     assert.equal(
       response.headers.get("referrer-policy"),
       "strict-origin-when-cross-origin",
@@ -155,7 +170,7 @@ describe("production session-cookie options", () => {
     assert.equal(cookie?.value, "session-token");
     assert.equal(cookie?.options.httpOnly, true);
     assert.equal(cookie?.options.secure, true);
-    assert.equal(cookie?.options.sameSite, "lax");
+    assert.equal(cookie?.options.sameSite, "none");
     assert.equal(cookie?.options.path, "/api/v1");
     assert.equal(typeof cookie?.options.maxAge, "number");
 
