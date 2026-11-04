@@ -7,7 +7,12 @@ import {
   patchPin,
   removePin,
 } from "../controllers/pins.controller.js";
-import { requireAuth } from "../middleware/auth.middleware.js";
+import {
+  likePin,
+  listPinLikes,
+  unlikePin,
+} from "../controllers/likes.controller.js";
+import { optionalAuth, requireAuth } from "../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
 import {
   createPinSchema,
@@ -15,6 +20,7 @@ import {
   pinListQuerySchema,
   updatePinSchema,
 } from "../schemas/pins.schema.js";
+import { likeListQuerySchema } from "../schemas/likes.schema.js";
 
 export const pinsRouter = Router();
 
@@ -43,4 +49,23 @@ pinsRouter.delete(
   requireAuth,
   validateRequest(pinIdParamsSchema, "params"),
   removePin,
+);
+pinsRouter.post(
+  "/:id/like",
+  requireAuth,
+  validateRequest(pinIdParamsSchema, "params"),
+  likePin,
+);
+pinsRouter.delete(
+  "/:id/like",
+  requireAuth,
+  validateRequest(pinIdParamsSchema, "params"),
+  unlikePin,
+);
+pinsRouter.get(
+  "/:id/likes",
+  optionalAuth,
+  validateRequest(pinIdParamsSchema, "params"),
+  validateRequest(likeListQuerySchema, "query"),
+  listPinLikes,
 );
