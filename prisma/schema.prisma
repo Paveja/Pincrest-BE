@@ -23,20 +23,6 @@ model User {
   pins           Pin[]
   boards         Board[]    @relation("BoardOwner")
   savedPinBoards PinBoard[] @relation("PinBoardSavedByUser")
-  id           String    @id @default(cuid())
-  name         String
-  username     String    @unique
-  email        String    @unique
-  passwordHash String
-  profileImage String?
-  bio          String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
-  followers    Follow[]  @relation("FollowFollowing")
-  following    Follow[]  @relation("FollowFollower")
-  pins         Pin[]
-  boards       Board[]
 }
 
 model Session {
@@ -52,59 +38,49 @@ model Session {
 }
 
 model Follow {
+  id          String   @unique @default(cuid())
   followerId  String
   followingId String
-  follower    User   @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User   @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  follower    User     @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
+  @@index([followerId, createdAt, id])
   @@index([followingId])
+  @@index([followingId, createdAt, id])
 }
 
 model Pin {
-  id        String     @id @default(cuid())
-  ownerId   String
-  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  boardPins PinBoard[]
-  id             String   @id @default(cuid())
+  id             String     @id @default(cuid())
   title          String
   description    String
   imageUrl       String
   destinationUrl String?
   ownerId        String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  owner          User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  boardPins      PinBoard[]
 
   @@index([ownerId])
   @@index([createdAt, id])
 }
 
 model Board {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
   description String
   coverImage  String?
-  isPrivate   Boolean  @default(false)
+  isPrivate   Boolean    @default(false)
   ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  owner       User       @relation("BoardOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  pins        PinBoard[]
 
   @@index([ownerId, createdAt])
   @@index([ownerId, isPrivate, createdAt])
-}
-
-model Board {
-  id        String     @id @default(cuid())
-  name      String
-  ownerId   String
-  owner     User       @relation("BoardOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  pins      PinBoard[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@index([ownerId])
 }
 
 model PinBoard {

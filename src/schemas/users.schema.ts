@@ -12,6 +12,15 @@ export const publicProfileParamsSchema = z.object({
   username: usernameSchema,
 });
 
+export const followUserParamsSchema = publicProfileParamsSchema;
+
+export const relationshipListQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+
 export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(1).max(100).optional(),
@@ -28,3 +37,5 @@ export const updateProfileSchema = z
   );
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type FollowUserParams = z.infer<typeof followUserParamsSchema>;
+export type RelationshipListQuery = z.infer<typeof relationshipListQuerySchema>;
