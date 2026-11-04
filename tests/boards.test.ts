@@ -210,13 +210,13 @@ describe("optional authentication for public board details", () => {
 });
 
 describe("board Pin response shape", () => {
-  it("returns full Pin fields instead of PinBoard join rows", async () => {
+  it("allows another user to read public board Pins but hides private ones", async () => {
     const originalSessionFindUnique = prisma.session.findUnique;
-    const originalBoardFindUnique = prisma.board.findUnique;
+    const originalBoardFindFirst = prisma.board.findFirst;
     const originalPinBoardFindMany = prisma.pinBoard.findMany;
     const createdAt = new Date("2026-02-01T00:00:00.000Z");
     const sessionUser = {
-      id: "board_owner_1",
+      id: "board_viewer_1",
       name: "Jordan Lee",
       username: "jordanlee",
       email: "jordan@example.com",
@@ -245,21 +245,27 @@ describe("board Pin response shape", () => {
       likes: [{ id: "like_1" }],
     };
     const boardId = "board_1";
-
-    prisma.session.findUnique = (async () => ({
-      expiresAt: new Date(Date.now() + 60_000),
-      user: sessionUser,
-    })) as typeof prisma.session.findUnique;
-    prisma.board.findUnique = (async () => ({
+    const board = {
       id: boardId,
       name: "Home inspiration",
       description: "Ideas for the living room.",
       coverImage: null,
       isPrivate: false,
-      ownerId: sessionUser.id,
+      ownerId: "board_owner_1",
       createdAt,
       updatedAt: createdAt,
-    })) as typeof prisma.board.findUnique;
+    };
+    let isPrivate = false;
+    let boardWhere: unknown;
+
+    prisma.session.findUnique = (async () => ({
+      expiresAt: new Date(Date.now() + 60_000),
+      user: sessionUser,
+    })) as typeof prisma.session.findUnique;
+    prisma.board.findFirst = (async (args: { where?: unknown }) => {
+      boardWhere = args.where;
+      return isPrivate ? null : { ...board, isPrivate };
+    }) as typeof prisma.board.findFirst;
     prisma.pinBoard.findMany = (async () => [
       { id: "pin_board_1", pin: pinRecord },
     ]) as typeof prisma.pinBoard.findMany;
@@ -281,9 +287,23 @@ describe("board Pin response shape", () => {
       assert.equal(pin.likeCount, 3);
       assert.equal(pin.isLiked, true);
       assert.equal("pinId" in pin, false);
+      assert.deepEqual(boardWhere, {
+        id: boardId,
+        OR: [{ isPrivate: false }, { ownerId: sessionUser.id }],
+      });
+
+      isPrivate = true;
+      const privateResponse = await fetch(
+        `${origin}/api/v1/boards/${boardId}/pins?limit=10`,
+        { headers: { Cookie: "pincrest_session=board-pin-session" } },
+      );
+      const privateBody = await privateResponse.json();
+
+      assert.equal(privateResponse.status, 404);
+      assert.equal(privateBody.error.code, "BOARD_NOT_FOUND");
     } finally {
       prisma.session.findUnique = originalSessionFindUnique;
-      prisma.board.findUnique = originalBoardFindUnique;
+      prisma.board.findFirst = originalBoardFindFirst;
       prisma.pinBoard.findMany = originalPinBoardFindMany;
     }
   });

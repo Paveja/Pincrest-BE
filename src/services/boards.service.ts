@@ -132,7 +132,7 @@ export async function getBoardPins(
   userId: string,
   query: GetBoardPinsQuery,
 ) {
-  const board = await requireOwnedBoard(boardId, userId);
+  const board = await getBoard(boardId, userId);
 
   if (query.cursor) {
     const cursorPin = await prisma.pinBoard.findFirst({

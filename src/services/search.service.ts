@@ -25,6 +25,7 @@ const userSearchSelect = {
   name: true,
   username: true,
   profileImage: true,
+  bio: true,
 } as const;
 
 function emptyResult(items: "pins" | "users", query: SearchQuery) {

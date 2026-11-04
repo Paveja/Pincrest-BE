@@ -38,7 +38,7 @@ function toComment(comment: {
   };
 }) {
   const { user, ...commentData } = comment;
-  return { ...commentData, creator: user };
+  return { ...commentData, author: user };
 }
 
 function commentNotFound(): ApiError {
@@ -74,13 +74,16 @@ export async function getPinComments(pinId: string, query: CommentListQuery) {
     prisma.comment.count({ where }),
   ]);
 
+  const totalPages = Math.ceil(total / query.limit);
+
   return {
     comments: comments.map(toComment),
     pagination: {
       page: query.page,
       limit: query.limit,
       total,
-      totalPages: Math.ceil(total / query.limit),
+      totalPages,
+      hasNextPage: query.page < totalPages,
     },
   };
 }
