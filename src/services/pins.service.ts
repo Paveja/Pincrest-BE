@@ -6,26 +6,39 @@ import type {
   UpdatePinInput,
 } from "../schemas/pins.schema.js";
 
-const pinSelect = {
-  id: true,
-  title: true,
-  description: true,
-  imageUrl: true,
-  destinationUrl: true,
-  ownerId: true,
-  createdAt: true,
-  updatedAt: true,
-  owner: {
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      profileImage: true,
+function pinSelect(viewerId?: string) {
+  return {
+    id: true,
+    title: true,
+    description: true,
+    imageUrl: true,
+    destinationUrl: true,
+    ownerId: true,
+    createdAt: true,
+    updatedAt: true,
+    owner: {
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        profileImage: true,
+      },
     },
-  },
-} as const;
+    _count: {
+      select: { likes: true },
+    },
+    ...(viewerId
+      ? {
+          likes: {
+            where: { userId: viewerId },
+            select: { id: true },
+          },
+        }
+      : {}),
+  } as const;
+}
 
-function toPin(pin: {
+type PinQueryResult = {
   id: string;
   title: string;
   description: string;
@@ -40,19 +53,28 @@ function toPin(pin: {
     username: string;
     profileImage: string | null;
   };
-}) {
-  const { owner, ...pinData } = pin;
-  return { ...pinData, creator: owner };
+  _count: { likes: number };
+  likes?: { id: string }[];
+};
+
+function toPin(pin: PinQueryResult) {
+  const { owner, _count, likes, ...pinData } = pin;
+  return {
+    ...pinData,
+    creator: owner,
+    likeCount: _count.likes,
+    isLiked: Boolean(likes?.length),
+  };
 }
 
 function pinNotFound(): ApiError {
   return new ApiError(404, "PIN_NOT_FOUND", "Pin was not found.");
 }
 
-async function requirePin(pinId: string) {
+async function requirePin(pinId: string, viewerId?: string) {
   const pin = await prisma.pin.findUnique({
     where: { id: pinId },
-    select: pinSelect,
+    select: pinSelect(viewerId),
   });
 
   if (!pin) {
@@ -62,18 +84,23 @@ async function requirePin(pinId: string) {
   return toPin(pin);
 }
 
-async function listPins(where: { ownerId?: string }, query: PinListQuery) {
+async function listPins(
+  where: { ownerId?: string },
+  query: PinListQuery,
+  viewerId?: string,
+) {
   const skip = (query.page - 1) * query.limit;
   const [pins, total] = await Promise.all([
     prisma.pin.findMany({
       where,
-      select: pinSelect,
+      select: pinSelect(viewerId),
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip,
       take: query.limit,
     }),
     prisma.pin.count({ where }),
   ]);
+  const totalPages = Math.ceil(total / query.limit);
 
   return {
     pins: pins.map(toPin),
@@ -81,21 +108,26 @@ async function listPins(where: { ownerId?: string }, query: PinListQuery) {
       page: query.page,
       limit: query.limit,
       total,
-      totalPages: Math.ceil(total / query.limit),
+      totalPages,
+      hasNextPage: query.page < totalPages,
     },
   };
 }
 
-export function getPin(pinId: string) {
-  return requirePin(pinId);
+export function getPin(pinId: string, viewerId?: string) {
+  return requirePin(pinId, viewerId);
 }
 
-export function getPins(query: PinListQuery) {
-  return listPins({}, query);
+export function getPins(query: PinListQuery, viewerId?: string) {
+  return listPins({}, query, viewerId);
 }
 
-export function getMyPins(ownerId: string, query: PinListQuery) {
-  return listPins({ ownerId }, query);
+export function getMyPins(
+  ownerId: string,
+  query: PinListQuery,
+  viewerId?: string,
+) {
+  return listPins({ ownerId }, query, viewerId);
 }
 
 export async function createPin(ownerId: string, input: CreatePinInput) {
@@ -109,7 +141,7 @@ export async function createPin(ownerId: string, input: CreatePinInput) {
         ? {}
         : { destinationUrl: input.destinationUrl }),
     },
-    select: pinSelect,
+    select: pinSelect(),
   });
 
   return toPin(pin);

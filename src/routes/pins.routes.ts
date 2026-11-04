@@ -24,7 +24,12 @@ import { likeListQuerySchema } from "../schemas/likes.schema.js";
 
 export const pinsRouter = Router();
 
-pinsRouter.get("/", validateRequest(pinListQuerySchema, "query"), listPins);
+pinsRouter.get(
+  "/",
+  optionalAuth,
+  validateRequest(pinListQuerySchema, "query"),
+  listPins,
+);
 pinsRouter.get(
   "/mine",
   requireAuth,
@@ -33,6 +38,7 @@ pinsRouter.get(
 );
 pinsRouter.get(
   "/:id",
+  optionalAuth,
   validateRequest(pinIdParamsSchema, "params"),
   getPinById,
 );
@@ -51,6 +57,12 @@ pinsRouter.delete(
   removePin,
 );
 pinsRouter.post(
+  "/:id/like",
+  requireAuth,
+  validateRequest(pinIdParamsSchema, "params"),
+  likePin,
+);
+pinsRouter.put(
   "/:id/like",
   requireAuth,
   validateRequest(pinIdParamsSchema, "params"),

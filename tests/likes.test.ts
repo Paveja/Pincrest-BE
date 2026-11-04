@@ -71,7 +71,7 @@ describe("Pin like request validation", () => {
 
 describe("Pin like routes", () => {
   it("rejects unauthenticated like and unlike requests", async () => {
-    for (const method of ["POST", "DELETE"] as const) {
+    for (const method of ["POST", "PUT", "DELETE"] as const) {
       const response = await fetch(
         `${origin}/api/v1/pins/c123456789012345678901234/like`,
         { method },
