@@ -46,9 +46,16 @@ model Follow {
 }
 
 model Pin {
-  id      String @id @default(cuid())
-  ownerId String
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  title          String
+  description    String
+  imageUrl       String
+  destinationUrl String?
+  ownerId        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
+  @@index([createdAt, id])
 }
