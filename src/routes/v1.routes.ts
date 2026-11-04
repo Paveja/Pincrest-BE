@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getHealth } from "../controllers/health.controller.js";
 import { authRouter } from "./auth.routes.js";
+import { boardsRouter } from "./boards.routes.js";
 import { boardsRouter, publicUserBoardsRouter } from "./boards.routes.js";
 import { uploadsRouter } from "./uploads.routes.js";
 import { pinsRouter } from "./pins.routes.js";
