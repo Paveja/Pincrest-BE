@@ -11,8 +11,10 @@ export const getPublicUserProfile: RequestHandler = async (
   _request,
   response,
 ) => {
-  const { username } = response.locals.validatedRequest as { username: string };
-  const user = await getPublicProfile(username);
+  const { username } = response.locals.validatedParams as { username: string };
+  const viewer = response.locals.authenticatedUser as
+    AuthenticatedUser | undefined;
+  const user = await getPublicProfile(username, viewer?.id);
 
   response.status(200).json({
     success: true,
