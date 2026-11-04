@@ -1,13 +1,10 @@
 node_modules/
 dist/
-coverage/
+src/generated/prisma/
 .env
 .env.*
 !.env.example
-prisma/generated/
-src/generated/prisma/
-/uploads/
-*.log
+uploads/
 
 # Crash artifacts — a single core dump can exceed GitHub's 100MB file limit
 core

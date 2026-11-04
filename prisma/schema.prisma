@@ -112,6 +112,8 @@ model Like {
   pin       Pin      @relation(fields: [pinId], references: [id], onDelete: Cascade)
 
   @@unique([userId, pinId])
+}
+
 model Comment {
   id        String   @id @default(cuid())
   content   String

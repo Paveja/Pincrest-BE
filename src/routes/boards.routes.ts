@@ -1,35 +1,37 @@
 import { Router } from "express";
 import {
   deleteBoardPin,
-  getBoardPinsHandler,
-  saveBoardPin,
-} from "../controllers/boards.controller.js";
-import { requireAuth } from "../middleware/auth.middleware.js";
-import { validateRequest } from "../middleware/validation.middleware.js";
-import {
-  boardParamsSchema,
-  boardPinParamsSchema,
-  getBoardPinsQuerySchema,
-  saveBoardPinSchema,
   deleteOwnedBoard,
   getBoardDetails,
+  getBoardPinsHandler,
   getMyBoardsList,
   getPublicBoardsForUser,
   patchBoard,
   postBoard,
+  saveBoardPin,
 } from "../controllers/boards.controller.js";
 import { optionalAuth, requireAuth } from "../middleware/auth.middleware.js";
 import { validateRequest } from "../middleware/validation.middleware.js";
 import {
   boardIdParamsSchema,
   boardListQuerySchema,
+  boardParamsSchema,
+  boardPinParamsSchema,
   createBoardSchema,
+  getBoardPinsQuerySchema,
   publicUserBoardsParamsSchema,
+  saveBoardPinSchema,
   updateBoardSchema,
 } from "../schemas/boards.schema.js";
 
 export const boardsRouter = Router();
 
+boardsRouter.post(
+  "/",
+  requireAuth,
+  validateRequest(createBoardSchema),
+  postBoard,
+);
 boardsRouter.post(
   "/:boardId/pins",
   requireAuth,
@@ -49,10 +51,6 @@ boardsRouter.delete(
   requireAuth,
   validateRequest(boardPinParamsSchema, "params"),
   deleteBoardPin,
-  "/",
-  requireAuth,
-  validateRequest(createBoardSchema),
-  postBoard,
 );
 boardsRouter.get(
   "/mine",
