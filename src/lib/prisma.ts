@@ -4,6 +4,7 @@ import { env } from "../config/env.js";
 
 const adapter = new PrismaPg({
   connectionString: env.DATABASE_URL,
+  ssl: false,
 });
 
 export const prisma = new PrismaClient({ adapter });
