@@ -7,6 +7,7 @@ import { uploadsRouter } from "./uploads.routes.js";
 import { searchRouter } from "./search.routes.js";
 import { pinsRouter } from "./pins.routes.js";
 import { usersRouter } from "./users.routes.js";
+import { commentsRouter } from "./comments.routes.js";
 
 export const v1Router = Router();
 
@@ -18,4 +19,5 @@ v1Router.use("/boards", boardsRouter);
 v1Router.use("/users", publicUserBoardsRouter);
 v1Router.use("/uploads", uploadsRouter);
 v1Router.use("/users", usersRouter);
+v1Router.use(commentsRouter);
 v1Router.use("/pins", pinsRouter);
