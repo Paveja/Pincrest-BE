@@ -18,6 +18,19 @@ app.use(
 );
 app.use(requestLoggingMiddleware);
 app.use(express.json({ limit: "1mb" }));
+
+if (env.IMAGE_STORAGE_DRIVER === "filesystem") {
+  app.use(
+    "/uploads",
+    express.static(env.IMAGE_STORAGE_DIR, {
+      index: false,
+      dotfiles: "deny",
+      setHeaders: (response) =>
+        response.setHeader("X-Content-Type-Options", "nosniff"),
+    }),
+  );
+}
+
 app.use("/api/v1", v1Router);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

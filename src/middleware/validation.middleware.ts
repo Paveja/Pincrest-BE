@@ -30,6 +30,13 @@ export function validateRequest<T>(
     const partName = `${part[0]?.toUpperCase()}${part.slice(1)}`;
     res.locals[`validated${partName}`] = result.data;
     res.locals.validatedRequest = result.data;
+    const localName = `validated${part.charAt(0).toUpperCase()}${part.slice(1)}`;
+    res.locals[localName] = result.data;
+
+    if (part === "params") {
+      res.locals.validatedParams = result.data;
+    }
+
     next();
   };
 }
